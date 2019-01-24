@@ -10,6 +10,10 @@ Autonomous Maze Navigation Robot Using a Raspberry pi.
 
 ##Components used:
 - Ultrasonic sensors (for obstacle detection)
-- Color Sensors (for color detection)
+- Color Sensor, TCS3200, (for color detection)
 
-##NOTE: This is not a necessary assumption as the algorithm can work without the color code
+
+##NOTE: 
+- The file, mazerunner.py, was successful during simulation but had errors when synchronising with the real life robot in the code.
+- The two python files, tourney.py and mazerunner.py, are to be integrated to work together.
+- This is not a necessary assumption as the algorithm can work without the color code
