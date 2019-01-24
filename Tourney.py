@@ -1,12 +1,16 @@
-import RPi.GPIO as GPIO
-import time
+#libraries are imported to support the raspberry pi pin synchronisation0
+import RPi.GPIO as GPIO 
+import time 
 import sys, tty, termios
-from gpiozero import DistanceSensor
+from gpiozero import DistanceSensor #this is used for the ultrasonic sensor
 import random
 
+#the numbering mode is set to BCM instead og BOARD
 GPIO.setmode(GPIO.BCM)
 
+#a try break statement is included to break the code from its running point whenever the 'ctrl' + 'x' key is pressed
 try:
+	#input and outputt pins are set
         input_list = [20,26,6]
         output_list = [3,2,17,4,21,19,13,18,23]
 
@@ -14,7 +18,8 @@ try:
         for i in output_list: GPIO.setup(i, GPIO.OUT)
 
         NUM_CYCLES=10
-
+	
+	#the pin numbers are assigned to letters for ease 
         right_motor_pve = 3
         right_motor_nve = 2
         left_motor_pve = 17
@@ -23,14 +28,14 @@ try:
         left_enable = 23
         front_sensor_echo = 20
         front_sensor_trigger = 21
-        #back_sensor_echo = 19
-        #back_sensor_trigger = 26
+        back_sensor_echo = 19
+        back_sensor_trigger = 26
         right_sensor_echo = 26
         right_sensor_trigger = 19
         left_sensor_echo = 6
         left_sensor_trigger = 13
-        #colorsensor_s0 = 25
-        #colorsensor_s1 = 8
+        colorsensor_s0 = 25
+        colorsensor_s1 = 8
         s2 = 16
         s3 = 12
         out = 25
@@ -44,8 +49,9 @@ try:
 	front_ultrasonic = DistanceSensor(front_sensor_echo, front_sensor_trigger)
         right_ultrasonic = DistanceSensor(right_sensor_echo, right_sensor_trigger)
         left_ultrasonic = DistanceSensor(left_sensor_echo, left_sensor_trigger)
-        #back_ultrasonic = DistanceSensor(back_sensor_echo, back_sensor_trigger)
-
+        
+	#this allows the color sensor to shoot out certain rays and capture the incident light to determine the color that is seen.
+	#different colors can be determined using their RGB code (red, green, blue and black are used in this instance)
 	def loop():
 	        temp=1
         	GPIO.output(s2, GPIO.LOW)
@@ -95,6 +101,7 @@ try:
                         move_backward()
                         time.sleep(0.5)
 
+	#the conditions for forward movement are defined in this function
         def move_forward():
 		print('moving forward')
                 GPIO.output(right_enable, True)
@@ -103,7 +110,8 @@ try:
                 GPIO.output(left_motor_pve, True)
                 GPIO.output(right_motor_nve, False)
                 GPIO.output(left_motor_nve, False)
-
+		
+	#the conditions for backward movement are defined in this function
         def move_backward():
 		print('moving backward')
                 GPIO.output(right_enable, True)
@@ -113,6 +121,7 @@ try:
                 GPIO.output(right_motor_nve, True)
                 GPIO.output(left_motor_nve, True)
 
+	#the conditions for turning 90 degrees to the left are defined in this function
         def move_left():
                 print('moving left')
 		if front_ultrasonic == 0:
@@ -125,7 +134,8 @@ try:
                 GPIO.output(right_motor_nve, False)
                 GPIO.output(left_motor_nve, True)
 		time.sleep(0.8)
-
+	
+	#the conditions for turning 90 degrees to the right are defined in this function
         def move_right():
 		print('moving right')
 		if front_ultrasonic == 0:
@@ -138,7 +148,8 @@ try:
                 GPIO.output(right_motor_nve, True)
                 GPIO.output(left_motor_nve, False)
 		time.sleep(0.8)
-
+	
+	#the conditions for stopping the robot are defined in this function
         def stop():
 		print('stop')
                 GPIO.output(right_motor_pve, False)
@@ -146,6 +157,8 @@ try:
                 GPIO.output(right_motor_nve, False)
                 GPIO.output(left_motor_nve, False)
 
+	#this allows the ultrasonic sensor to shoot ultrasonic waves for a very short period of time and get a response
+	#based on the time taken to get a response, an approximate value of distance is calculated
         def distance():
                 GPIO.output(right_sensor_trigger, True)
                 time.sleep(0.00001)
@@ -159,75 +172,14 @@ try:
                 distance = round(distance, 2)
                 return distance
         
-        track = []
-	current_checkpoint = None
-	track_direction = []
-	reverse = False
+	#this prints the value of the right, left and forward sensors to the screen respectively
 	while True:
 		right_sensor = int(right_ultrasonic.distance > 0.25)
 		left_sensor = int(left_ultrasonic.distance > 0.25)
-		middle_sensor = int(front_ultrasonic.distance > 0.15)
+		forward_sensor = int(front_ultrasonic.distance > 0.15)
 
-		print('right_sensor = {}, left_sensor = {}, middle_sensor = {}'.format(right_sensor, left_sensor, middle_sensor))
-		if right_sensor == 1 or left_sensor == 1:
-			check_points = {}
-                        if right_sensor == 1:
-                                check_points['r'] = 0
+		print('right_sensor = {}, left_sensor = {}, middle_sensor = {}'.format(right_sensor, left_sensor, forward_sensor))
 
-                        if left_sensor == 1:
-                                check_points['l'] = 0
-
-                        if len(check_points) > 0:
-                                track.append(check_points)
-                                track_direction.append(None)
-                                current_checkpoint = len(track) - 1
-                                print('setting checkpoint')
-
-                        if right_sensor == 1:
-                                check_points['r'] = 0
-
-                        if left_sensor == 1:
-                                check_points['l'] = 0
-
-                        if len(check_points) > 0:
-                                track.append(check_points)
-                                track_direction.append(None)
-                                current_checkpoint = len(track) - 1
-                                print('setting checkpoint')
-
-			if reverse and current_checkpoint != None:
-				last_direction = track_direction[current_checkpoint]
-				if last_direction == 'r':
-					move_left()
-
-				else:
-					move_right()
-				reverse = False
-
-		if reverse or (right_sensor == left_sensor == middle_sensor == 0):
-			reverse = True
-			move_backward()
-
-		elif current_checkpoint != None:
-			check_point = track[current_checkpoint]
-			available_paths = [x for x in check_point if check_point[x] == 0]
-			if len(available_paths) > 0:
-				if 'r' in available_paths:
-					path = 'r'
-				else:
-					path = available_paths[random.randint(0, len(available_paths)-1)]
-				track[current_checkpoint][path] = 1
-				track_direction[current_checkpoint] = path
-				if path == 'r':
-					move_right()
-
-				else:
-					move_left()
-
-			move_forward()
-
-		elif right_sensor == 0 and left_sensor == 0:
-			move_forward()
 
 
 except KeyboardInterrupt:
